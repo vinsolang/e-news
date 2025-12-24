@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import Profile from '../../assets/image/lang.JPG';
+import Swal from "sweetalert2";
 import {
   LayoutDashboard,
   FileText,
@@ -15,7 +16,8 @@ import {
   Trash2,
   Upload,
   Shield,
-  LogOut
+  LogOut,
+  User, Mail, MessageSquare 
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,6 +30,7 @@ import {
 } from "recharts";
 // import { mockNews, mockMovies } from '../../data/mockData';
 import { mockNews, mockMovies } from '../../data/mockData';
+
 /*=========================================================
                     @@ AdminOverview
 ==========================================================*/
@@ -177,171 +180,399 @@ const AdminOverview = () => {
 /*=========================================================
                     @@ AdminArticles
 ==========================================================*/
+interface Categorys {
+  id: number;
+  category_name: string;
+}
+
+interface NewsArticle {
+  id: number;
+  title: string;
+  caption: string;
+  category_id: number;
+  category?: Categorys;
+  type_news: string;
+  name_post: string;
+  time_red: string;
+  view: number;
+  description: string;
+  image: string;
+}
+
 const AdminArticles = () => {
   const [showModal, setShowModal] = useState(false);
+  const [categories, setCategories] = useState<Categorys[]>([]);
+  const [newsList, setNewsList] = useState<NewsArticle[]>([]);
+  const [newArticle, setNewArticle] = useState<any>({});
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/categories")
+      .then(res => res.json())
+      .then(data => setCategories(data));
+  }, []);
+
+  const fetchNews = () => {
+    fetch("http://127.0.0.1:8000/api/news")
+      .then(res => res.json())
+      .then(data => setNewsList(data));
+  };
+
+  useEffect(() => {
+    fetchNews();
+  }, []);
+
+  // Save / Update
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+    Object.entries(newArticle).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value);
+      }
+    });
+
+    if (isEditing) formData.append("_method", "PUT");
+
+    const url = isEditing
+      ? `http://127.0.0.1:8000/api/news/${newArticle.id}`
+      : "http://127.0.0.1:8000/api/news";
+
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let msg = await res.text();
+      alert(msg);
+      return;
+    }
+
+    alert(isEditing ? "Updated successfully!" : "Saved successfully!");
+    setShowModal(false);
+    setNewArticle({});
+    setIsEditing(false);
+    fetchNews();
+  };
+
+  // Edit
+  const handleEdit = (article: NewsArticle) => {
+    setNewArticle({
+      ...article,
+      image: null, // important: reset file input
+      old_image: article.image, // store old image for preview
+    });
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  // Delete
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this article?")) return;
+
+    const res = await fetch(`http://127.0.0.1:8000/api/news/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      alert("Delete failed");
+      return;
+    }
+
+    alert("Deleted successfully!");
+    fetchNews();
+  };
+
+  const handleCancel = () => {
+    setShowModal(false);
+    setNewArticle({});
+    setIsEditing(false);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manage News Articles</h1>
-          <p className="text-gray-600 dark:text-gray-400">Create, edit, and manage your news articles</p>
-        </div>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Manage News Articles</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center"
         >
-          <Plus className="w-5 h-5" />
-          <span>New Article</span>
+          <Plus className="w-5 h-5 mr-2" /> New Article
         </button>
       </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl w-full max-w-lg shadow-2xl border border-gray-200 dark:border-gray-700">
-            {/* Title */}
-            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center">
-              ✍️ Add News Article
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="p-4 rounded-xl w-full max-w-4xl py-16">
+            <h2 className="text-xl font-bold mb-4">
+              {isEditing ? "Edit Article" : "Add Article"}
             </h2>
 
-            {/* Form */}
-            <form className="space-y-4">
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Article Title
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter article title"
-                  className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
+            <form
+              onSubmit={handleSubmit}
+              className="bg-white p-6 rounded-2xl shadow-lg space-y-4 max-w-7xl mx-auto"
+            >
+              <h2 className="text-2xl font-semibold text-gray-700 border-b pb-3">
+                {isEditing ? "Update Article" : "Create New Article"}
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Title */}
+                <div className="flex flex-col">
+                  <label className="font-medium mb-1">Title</label>
+                  <input
+                    type="text"
+                    placeholder="Enter title"
+                    value={newArticle.title || ""}
+                    onChange={e =>
+                      setNewArticle({ ...newArticle, title: e.target.value })
+                    }
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                  />
+                </div>
+
+                {/* Caption */}
+                <div className="flex flex-col">
+                  <label className="font-medium mb-1">Caption</label>
+                  <input
+                    type="text"
+                    placeholder="Enter caption"
+                    value={newArticle.caption || ""}
+                    onChange={e =>
+                      setNewArticle({ ...newArticle, caption: e.target.value })
+                    }
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                  />
+                </div>
+
+                {/* Image Upload */}
+                <div className="flex flex-col">
+                  <label className="font-medium mb-1">Image</label>
+                  <input
+                    type="file"
+                    onChange={e =>
+                      setNewArticle({
+                        ...newArticle,
+                        image: e.target.files?.[0] || null,
+                      })
+                    }
+                    className="rounded-lg border p-2 bg-gray-50"
+                  />
+
+                  {isEditing && newArticle.old_image && (
+                    <img
+                      src={newArticle.old_image}
+                      className="w-28 h-28 mt-3 rounded-lg object-cover border"
+                    />
+                  )}
+                </div>
+
+                {/* Category */}
+                <div className="flex flex-col">
+                  <label className="font-medium mb-1">Category</label>
+                  <select
+                    value={newArticle.category_id || ""}
+                    onChange={e =>
+                      setNewArticle({
+                        ...newArticle,
+                        category_id: Number(e.target.value),
+                      })
+                    }
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.category_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className='flex space-x-6'>
+                  {/* Type News */}
+                <div className="flex flex-col">
+                  <label className="font-medium mb-1">Type News</label>
+                  <select
+                    value={newArticle.type_news || ""}
+                    onChange={e =>
+                      setNewArticle({ ...newArticle, type_news: e.target.value })
+                    }
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="trending">Trending</option>
+                    <option value="latest">Latest</option>
+                  </select>
+                </div>
+
+                {/* Sender */}
+                <div className="flex flex-col">
+                  <label className="font-medium mb-1">Sender Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter sender name"
+                    value={newArticle.name_post || ""}
+                    onChange={e =>
+                      setNewArticle({ ...newArticle, name_post: e.target.value })
+                    }
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                  />
+                </div>
+                {/* Time Read */}
+                <div className="flex flex-col">
+                  <label className="font-medium mb-1">Time Read</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 5 min"
+                    value={newArticle.time_red || ""}
+                    onChange={e =>
+                      setNewArticle({ ...newArticle, time_red: e.target.value })
+                    }
+                    className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                  />
+                </div>
+                </div>
               </div>
-              {/* Photo Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Photo
-                </label>
-                <input
-                  type="file"
-                  className="w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 dark:file:bg-purple-700 dark:file:text-white dark:hover:file:bg-purple-600"
-                />
-              </div>
-              {/* Category */}
-              <div>
-                <label
-                  htmlFor="category"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Category
-                </label>
-                <select
-                  name="category"
-                  id="category"
-                  className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  defaultValue=""
-                >
-                  <option value="" disabled>
-                    Select category
-                  </option>
-                  <option value="National">National</option>
-                  <option value="International">International</option>
-                  <option value="Sport">Sport</option>
-                  <option value="Life & Social">Life & Social</option>
-                  <option value="Technology">Technology</option>
-                </select>
-              </div>
-              {/* Content */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Content
-                </label>
+
+              {/* Description Full Width */}
+              <div className="flex flex-col">
+                <label className="font-medium mb-1">Description</label>
                 <textarea
-                  rows="4"
-                  placeholder="Write your article content..."
-                  className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  rows={3}
+                  placeholder="Write the article description..."
+                  value={newArticle.description || ""}
+                  onChange={e =>
+                    setNewArticle({
+                      ...newArticle,
+                      description: e.target.value,
+                    })
+                  }
+                  className="p-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
                 ></textarea>
               </div>
 
               {/* Buttons */}
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+                  onClick={handleCancel}
+                  className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold hover:from-blue-700 hover:to-blue-600 shadow-md transition"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow"
                 >
-                  Save news
+                  {isEditing ? "Update" : "Save"}
                 </button>
               </div>
             </form>
+
           </div>
         </div>
-
       )}
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Photo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Article</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Views</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {mockNews.map((article) => (
-                <tr key={article.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      <img className="w-12 h-12 object-cover rounded-lg" src={article.image} />
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{article.title}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">By {article.author}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white capitalize">{article.category}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">{article.views.toLocaleString()}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${article.featured
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                        }`}
-                    >
-                      {article.featured ? "Featured" : "Published"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium space-x-2">
-                    <button className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button className="text-red-600 hover:text-red-700 dark:text-red-400">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="bg-white rounded-xl shadow">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b">
+              <th className="p-3">Image</th>
+              <th className="p-3">Article</th>
+              <th className="p-3">view</th>
+              <th className="p-3">Category</th>
+              <th className="p-3">Type</th>
+              <th className="p-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          {newsList.map(article => (
+          <tr
+          key={article.id}
+          className="hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 group"
+          >
+          {/* 1. Photo */}
+          <td className="px-6 py-4 whitespace-nowrap">
+          {article.image && (
+          <img
+          src={article.image as string}
+          className="w-16 h-16 rounded-xl object-cover shadow group-hover:scale-105 transition border border-gray-200 dark:border-gray-600"
+          alt={article.title}
+          />
+          )}
+          </td>
+
+
+          {/* 2. Title + Caption */}
+          <td className="px-6 py-4 max-w-sm">
+          <div className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2">
+          {article.title}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+          {article.caption}
+          </div>
+          </td>
+
+
+          {/* 3. Views */}
+          <td className="px-6 py-4 whitespace-nowrap text-sm">
+          <span className="font-mono text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md shadow-sm">
+          {article.view?.toLocaleString() || 0}
+          </span>
+          </td>
+
+
+          {/* 4. Category */}
+          <td className="px-6 py-4 whitespace-nowrap text-sm">
+          <span className="px-3 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300 shadow-sm">
+          {article.category?.category_name || 'N/A'}
+          </span>
+          </td>
+
+
+          {/* 5. Type News */}
+          <td className="px-6 py-4 whitespace-nowrap">
+          <span
+          className={`px-3 py-1 text-xs font-semibold rounded-full capitalize shadow-sm ${
+          article.type_news === 'trending'
+          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+          }`}
+          >
+          {article.type_news}
+          </span>
+          </td>
+
+
+          {/* 6. Actions */}
+          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex items-center justify-end gap-3">
+          <button
+          onClick={() => handleEdit(article)}
+          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 transition shadow-sm"
+          title="Edit Article"
+          >
+          <Edit size={18} />
+          </button>
+
+
+          <button
+          onClick={() => handleDelete(article.id)}
+          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-2 rounded-full hover:bg-red-50 dark:hover:bg-gray-600 transition shadow-sm"
+          title="Delete Article"
+          >
+          <Trash2 size={18} />
+          </button>
+          </td>
+          </tr>
+          ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -575,44 +806,140 @@ const AdminUsers = () => {
 ==========================================================*/
 type Category = {
   id: number;
-  name: String;
-  description: String;
-  moviesCount: number;
+  category_name: string;
 };
-const mockCategories: Category[] = [
-  { id: 1, name: "National", description: "National news", moviesCount: 12 },
-  { id: 2, name: "International", description: "Global news", moviesCount: 8 },
-  { id: 3, name: "Sports", description: "Sports news", moviesCount: 20 },
-];
+// const mockCategories: Category[] = [
+//   { id: 1, name: "National"},
+//   { id: 2, name: "International"},
+//   { id: 3, name: "Sports", },
+// ];
 const AdminCategories = () => {
-  const [categories, setCategories] = useState<Category[]>(mockCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [newCategory, setNewCategory] = useState({ name: "", description: "" });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
 
-  const handleAddCategory = (e: React.FormEvent) => {
+  const [newCategory, setNewCategory] = useState({ name: "" });
+
+  // ---------------------------------------------------
+  // Fetch All Categories
+  // ---------------------------------------------------
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/categories")
+      .then(res => res.json())
+      .then(data => setCategories(data));
+  }, []);
+
+  // ---------------------------------------------------
+  // Create Category
+  // ---------------------------------------------------
+  const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCategory.name) return;
 
-    const nextId = categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1;
-    setCategories([...categories, { ...newCategory, id: nextId, moviesCount: 0 }]);
-    setNewCategory({ name: "", description: "" });
+    const res = await fetch("http://127.0.0.1:8000/api/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category_name: newCategory.name }),
+    });
+
+    const result = await res.json();
+    setCategories([...categories, result]);
+    setNewCategory({ name: "" });
     setShowModal(false);
   };
 
-  const handleDelete = (id: number) => {
-    setCategories(categories.filter(c => c.id !== id));
+  // ---------------------------------------------------
+  // Load category to modal for editing
+  // ---------------------------------------------------
+  const handleEdit = (cat: Category) => {
+    setIsEditing(true);
+    setEditId(cat.id);
+    setNewCategory({ name: cat.category_name });
+    setShowModal(true);
   };
+
+  // ---------------------------------------------------
+  // Update category
+  // ---------------------------------------------------
+  const handleUpdateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const res = await fetch(`http://127.0.0.1:8000/api/categories/${editId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category_name: newCategory.name }),
+    });
+
+    const updated = await res.json();
+
+    setCategories(categories.map(c =>
+      c.id === editId ? updated.category : c
+    ));
+
+    setIsEditing(false);
+    setEditId(null);
+    setNewCategory({ name: "" });
+    setShowModal(false);
+  };
+
+  // ---------------------------------------------------
+  // Delete category
+  // ---------------------------------------------------
+  const handleDelete = async (id: number) => {
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, Delete',
+    cancelButtonText: 'No, Not Delete',
+  });
+
+  if (result.isConfirmed) {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/categories/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setCategories(categories.filter(c => c.id !== id));
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Category has been deleted.',
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error!',
+          text: 'Failed to delete category.',
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error!',
+        text: 'Something went wrong.',
+      });
+    }
+  }
+};
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Categories News and Movies Management</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage categories and premium movies</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Categories News</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage categories</p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => { setShowModal(true); setIsEditing(false); }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
         >
           <Plus className="w-5 h-5" />
@@ -620,57 +947,51 @@ const AdminCategories = () => {
         </button>
       </div>
 
-      {/* Modal Form */}
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center">
-              📂 Add New Category
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl w-full max-w-md shadow-xl border border-gray-300 dark:border-gray-700">
+            
+            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+              {isEditing ? "✏️ Edit Category" : "📂 Add New Category"}
             </h2>
 
-            <form className="space-y-4" onSubmit={handleAddCategory}>
+            <form onSubmit={isEditing ? handleUpdateCategory : handleAddCategory} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
                   Category Name
                 </label>
                 <input
                   type="text"
-                  placeholder="Enter category name"
                   value={newCategory.name}
-                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                  className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  onChange={e => setNewCategory({ name: e.target.value })}
                   required
+                  className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Description
-                </label>
-                <textarea
-                  placeholder="Short description"
-                  value={newCategory.description}
-                  onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                  className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end pt-4 space-x-3">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition"
+                  onClick={() => {
+                    setShowModal(false);                 // Close the modal
+                    setNewCategory({ name: "" }); // Reset form fields
+                    setIsEditing(false);                 // Optional: reset editing mode
+                  }}
+                  className="px-4 py-2 rounded-lg bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold hover:from-blue-700 hover:to-blue-600 shadow-md transition"
+                  className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
                 >
-                  Save
+                  {isEditing ? "Update" : "Save"}
                 </button>
               </div>
             </form>
+
           </div>
         </div>
       )}
@@ -678,42 +999,34 @@ const AdminCategories = () => {
       {/* Categories Table */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700">
+          <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Description
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Movies Count
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Actions
-              </th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Category Name</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
             </tr>
           </thead>
+
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {categories.map((cat) => (
+            {categories.map(cat => (
               <tr key={cat.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-6 py-4 text-gray-900 dark:text-white">{cat.name}</td>
-                <td className="px-6 py-4 text-gray-900 dark:text-white">{cat.description}</td>
-                <td className="px-6 py-4 text-gray-900 dark:text-white">{cat.moviesCount}</td>
-                <td className="px-6 py-4 text-sm font-medium space-x-2">
-                  <button className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                    <Edit className="w-4 h-4" />
+                <td className="px-6 py-4 text-gray-900 dark:text-white">
+                  {cat.category_name}
+                </td>
+                <td className="px-6 py-4 space-x-4">
+                  <button onClick={() => handleEdit(cat)} className="text-blue-600 hover:text-blue-700">
+                    <Edit className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleDelete(cat.id)}
-                    className="text-red-600 hover:text-red-700 dark:text-red-400"
+                    className="text-red-600 hover:text-red-700"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </td>
               </tr>
             ))}
           </tbody>
+
         </table>
       </div>
     </div>
@@ -787,8 +1100,111 @@ const AdminAnalytics = () => {
                     @@ AdminSettings
 ==========================================================*/
 const AdminSettings = () => {
+ const [tab, setTab] = useState("profile");
+
   return (
-    <div className="text-center py-12 text-gray-500">AdminSettings management coming soon</div>
+    <div className="p-6">
+      {/* Navigation */}
+      <div className="flex gap-6 border-b pb-3 mb-6">
+        <button
+          className={`pb-2 font-medium ${
+            tab === "profile"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-500"
+          }`}
+          onClick={() => setTab("profile")}
+        >
+          Profile
+        </button>
+
+        <button
+          className={`relative pb-2 font-medium ${
+            tab === "contact"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-500"
+          }`}
+          onClick={() => setTab("contact")}
+        >
+          Contact Messages
+
+          {/* Notification Badge */}
+          <span className="absolute -top-2 -right-4 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
+            5
+          </span>
+        </button>
+
+      </div>
+
+      {/* PROFILE SECTION */}
+      {tab === "profile" && (
+        <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+            <User size={18} /> Admin Profile
+          </h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Full Name</label>
+              <input
+                className="w-full mt-1 px-3 py-2 border rounded-lg"
+                placeholder="Enter admin name"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <input
+                className="w-full mt-1 px-3 py-2 border rounded-lg"
+                placeholder="Enter admin email"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Bio</label>
+              <textarea
+                className="w-full mt-1 px-3 py-2 border rounded-lg"
+                placeholder="Short admin bio..."
+              ></textarea>
+            </div>
+
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg">
+              Save Profile
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CONTACT MESSAGES SECTION */}
+      {tab === "contact" && (
+        <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold flex items-center gap-2 mb-4">
+            <MessageSquare size={18} /> User Contact Messages
+          </h2>
+
+          {/* Static message sample */}
+          <div className="bg-gray-50 p-4 rounded-xl space-y-3 border">
+            <div className="flex items-center gap-2 text-gray-700">
+              <User size={16} /> <span className="font-medium">Name:</span>{" "}
+              <span>John Doe</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-gray-700">
+              <Mail size={16} /> <span className="font-medium">Email:</span>{" "}
+              <span>john@example.com</span>
+            </div>
+
+            <div className="text-gray-700">
+              <span className="font-medium">Subject:</span> Feedback
+            </div>
+
+            <div className="text-gray-700">
+              <span className="font-medium">Message:</span> Your site UI looks
+              very good!
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 /*=========================================================

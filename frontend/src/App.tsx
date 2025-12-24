@@ -13,6 +13,9 @@ import AdminLogin from './pages/admin/AdminLogin';
 import CategoryNews from './pages/CategoryNews';
 import ProtectedRoute from './components/ProtectedRoute';
 
+
+
+
 function App() {
   const { user, loading } = useAuth();
   const { isDark } = useTheme();
@@ -28,28 +31,87 @@ function App() {
   return (
     <div className={isDark ? 'dark' : ''}>
       <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+
         <Routes>
+
+          {/*  PUBLIC ROUTES (NO LOGIN REQUIRED) */}
           <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/news/:id" element={<Layout><NewsDetail /></Layout>} />
+          <Route path="/category/:category" element={<Layout><CategoryNews /></Layout>} />
+          <Route path="/about" element={<Layout><About /></Layout>} />
+          <Route path="/contact" element={<Layout><Contact /></Layout>} />
+
+          {/*  ADMIN ROUTES */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/*" element={<AdminDashboard />} />
-          <Route path="/*" element={
-            <ProtectedRoute>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/news/:id" element={<NewsDetail />} />
-                  <Route path="/category/:category" element={<CategoryNews />} />
-                  {/* <Route path="/movies" element={<Movies />} /> */}
-                  <Route path="/about" element={<About />} />
-                  <Route path="/contact" element={<Contact />} />
-                </Routes>
-              </Layout>
-            </ProtectedRoute>
-          } />
+          <Route 
+            path="/admin/*" 
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
         </Routes>
+
       </div>
     </div>
   );
 }
 
 export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// function App() {
+//   const { user, loading } = useAuth();
+//   const { isDark } = useTheme();
+
+//   if (loading) {
+//     return (
+//       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+//         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className={isDark ? 'dark' : ''}>
+//       <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
+//         <Routes>
+//           <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+//           <Route path="/admin/login" element={<AdminLogin />} />
+//           <Route path="/admin/*" element={<AdminDashboard />} />
+//           <Route path="/*" element={
+//             <ProtectedRoute>
+//               <Layout>
+//                 <Routes>
+//                   <Route path="/" element={<Home />} />
+//                   <Route path="/news/:id" element={<NewsDetail />} />
+//                   <Route path="/category/:category" element={<CategoryNews />} />
+//                   {/* <Route path="/movies" element={<Movies />} /> */}
+//                   <Route path="/about" element={<About />} />
+//                   <Route path="/contact" element={<Contact />} />
+//                 </Routes>
+//               </Layout>
+//             </ProtectedRoute>
+//           } />
+//         </Routes>
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default App;

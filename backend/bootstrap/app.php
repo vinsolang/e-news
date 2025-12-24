@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,8 +13,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
-    })
+
+    //  ADD CORS MIDDLEWARE (THIS FIXES YOUR ERROR)
+    $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+
+    //  KEEP YOUR API MIDDLEWARE
+    $middleware->api([
+    'throttle:60,1',
+    \Illuminate\Routing\Middleware\SubstituteBindings::class,
+    ]);
+
+})
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

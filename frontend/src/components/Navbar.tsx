@@ -133,33 +133,73 @@ export default function Navbar() {
                 ) : (
                   <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 )}
-                <span className="hidden md:block text-sm text-gray-700 dark:text-gray-300">{user?.name}</span>
+
+                {user && (
+                  <span className="hidden md:block text-sm text-gray-700 dark:text-gray-300">
+                    {user.name}
+                  </span>
+                )}
               </button>
-              
+
               {showUserMenu && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-                  <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
-                  </div>
-                  {user?.isAdmin && (
-                    <Link
-                      to="/admin"
-                      onClick={() => setShowUserMenu(false)}
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      Admin Dashboard
-                    </Link>
+
+                  {/*  NOT LOGGED IN */}
+                  {!user && (
+                    <>
+                      <Link
+                        to="/login"
+                        onClick={() => setShowUserMenu(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors rounded-t-lg"
+                      >
+                        Login
+                      </Link>
+
+                      <Link
+                        to="/register"
+                        onClick={() => setShowUserMenu(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors rounded-b-lg"
+                      >
+                        Register
+                      </Link>
+                    </>
                   )}
-                  <button
-                    onClick={() => {
-                      logout();
-                      setShowUserMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors rounded-b-lg"
-                  >
-                    Logout
-                  </button>
+
+                  {/*  LOGGED IN */}
+                  {user && (
+                    <>
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {user.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {user.email}
+                        </p>
+                      </div>
+
+                      {/*  ADMIN ONLY */}
+                      {user.role === 'Admin' && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setShowUserMenu(false)}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-blue-500 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          Admin Dashboard
+                        </Link>
+                      )}
+
+                      {/*  LOGOUT */}
+                      <button
+                        onClick={() => {
+                          logout();
+                          setShowUserMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 transition-colors rounded-b-lg"
+                      >
+                        Logout
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

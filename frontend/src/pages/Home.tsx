@@ -56,8 +56,8 @@ export default function Home() {
                 to="/movies"
                 className="border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white hover:text-blue-600 transition-colors flex items-center justify-center space-x-2"
               >
-                <Play className="w-5 h-5" />
-                <span>Watch Movies</span>
+                {/* <Play className="w-5 h-5" /> */}
+                <span>About Us</span>
               </Link>
             </div>
           </div>
@@ -255,59 +255,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Featured Movies Preview */}
-      {/* <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Premium Movies 🎬</h2>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">Discover our exclusive collection of premium films</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {mockMovies.filter(movie => movie.featured).map((movie) => (
-              <div key={movie.id} className="group bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-                <div className="aspect-w-2 aspect-h-3 h-80">
-                  <img
-                    src={movie.poster}
-                    alt={movie.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <Play className="w-16 h-16 text-white" />
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{movie.year}</span>
-                    <span className="text-sm font-bold text-green-600 dark:text-green-400">${movie.price}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{movie.title}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{movie.description}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-yellow-500">★</span>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{movie.rating}</span>
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{movie.duration}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center mt-12">
-            <Link
-              to="/movies"
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-full font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              <Play className="w-5 h-5" />
-              <span>Explore All Movies</span>
-            </Link>
-          </div>
-        </div>
-      </section> */}
     </div>
   );
 }
